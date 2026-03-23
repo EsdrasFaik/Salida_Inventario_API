@@ -7,7 +7,45 @@ const { sequelize } = require('../../config/database');
 const { getIO } = require('../../config/socket');
 const { Op } = require('sequelize');
 
-// --- SIMULAR DETALLE (FIFO por Lotes) ---
+// --- Función para obtener el número base sin sufijo de contador ---
+const obtenerNumeroBase = (numeroLote) => {
+    return numeroLote.replace(/ - \d+$/, '').trim();
+};
+
+// --- Función para generar número único global ---
+const generarNumeroLoteUnico = async (numeroBase, sucursalDestinoId, transaction) => {
+    const loteExistenteDestino = await Lote.findOne({
+        where: {
+            [Op.or]: [
+                { numeroLote: numeroBase },
+                { numeroLote: { [Op.like]: `${numeroBase} - %` } }
+            ],
+            sucursalId: sucursalDestinoId
+        },
+        transaction
+    });
+
+    if (loteExistenteDestino) return loteExistenteDestino.numeroLote;
+
+    const rows = await sequelize.query(
+        `SELECT DISTINCT sucursalId FROM lotes 
+         WHERE numeroLote = ? OR numeroLote LIKE ?`,
+        {
+            replacements: [numeroBase, `${numeroBase} - %`],
+            type: sequelize.QueryTypes.SELECT,
+            transaction
+        }
+    );
+
+    const totalSucursales = Array.isArray(rows) ? rows.length : 0;
+
+    if (totalSucursales === 0) return numeroBase;
+
+    const nuevoContador = totalSucursales + 1;
+
+    return `${numeroBase} - ${nuevoContador}`;
+};
+// --- SIMULAR DETALLE ---
 exports.simularDetalleSalida = async (req, res) => {
     try {
         const { sucursalOrigenId, productoId, cantidad } = req.body;
@@ -71,7 +109,6 @@ exports.createSalida = async (req, res) => {
         }
 
         const { sucursalOrigenId, sucursalDestinoId, detalles } = req.body;
-        // usuarioId siempre del token, nunca del body
 
         if (!Array.isArray(detalles) || detalles.length === 0) {
             await t.rollback();
@@ -79,7 +116,7 @@ exports.createSalida = async (req, res) => {
         }
 
         const salidasEnviadas = await Salida.sum('totalCosto', {
-            where: { sucursalDestinoId, estado: 'Enviada' },
+            where: { sucursalDestinoId, estado: 'Enviada a sucursal' },
             transaction: t
         });
 
@@ -110,9 +147,9 @@ exports.createSalida = async (req, res) => {
         const nuevaSalida = await Salida.create({
             sucursalOrigenId,
             sucursalDestinoId,
-            usuarioId: usuarioToken.id, // ← siempre del token
+            usuarioId: usuarioToken.id,
             totalCosto: totalCostoCalculado.toFixed(2),
-            estado: 'Enviada'
+            estado: 'Enviada a sucursal'
         }, { transaction: t });
 
         const detallesPromesas = detalles.map(d =>
@@ -133,7 +170,7 @@ exports.createSalida = async (req, res) => {
             sucursalOrigenId,
             sucursalDestinoId,
             totalCosto: totalCostoCalculado,
-            estado: 'Enviada',
+            estado: 'Enviada a sucursal',
             creadaEn: nuevaSalida.createdAt
         });
 
@@ -178,7 +215,6 @@ exports.getSalidas = async (req, res) => {
             ],
             order: [['createdAt', 'DESC']]
         });
-
 
         const result = salidas.map(salida => {
             const data = salida.toJSON();
@@ -246,9 +282,17 @@ exports.updateEstadoSalida = async (req, res) => {
             for (const detalle of detalles) {
                 const loteOrigen = await Lote.findByPk(detalle.loteId, { transaction: t });
 
+                const numeroBase = obtenerNumeroBase(loteOrigen.numeroLote);
+
+                const numeroLoteDestino = await generarNumeroLoteUnico(
+                    numeroBase,
+                    salida.sucursalDestinoId,
+                    t
+                );
+
                 const loteExistente = await Lote.findOne({
                     where: {
-                        numeroLote: loteOrigen.numeroLote,
+                        numeroLote: numeroLoteDestino,
                         sucursalId: salida.sucursalDestinoId,
                     },
                     transaction: t
@@ -262,7 +306,7 @@ exports.updateEstadoSalida = async (req, res) => {
                     }, { transaction: t });
                 } else {
                     await Lote.create({
-                        numeroLote: loteOrigen.numeroLote,
+                        numeroLote: numeroLoteDestino,
                         productoId: loteOrigen.productoId,
                         fechaVencimiento: loteOrigen.fechaVencimiento,
                         cantidadActual: detalle.cantidad,

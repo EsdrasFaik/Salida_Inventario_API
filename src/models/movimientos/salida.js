@@ -10,9 +10,9 @@ const Salida = sequelize.define('Salida', {
         defaultValue: DataTypes.NOW
     },
     estado: {
-        type: DataTypes.ENUM('Enviada', 'Recibida', 'Anulada'),
+        type: DataTypes.ENUM('Enviada a sucursal', 'Recibida', 'Anulada'),
         allowNull: false,
-        defaultValue: 'Enviada'
+        defaultValue: 'Enviada a sucursal'
     },
     totalCosto: {
         type: DataTypes.DECIMAL(10, 2),

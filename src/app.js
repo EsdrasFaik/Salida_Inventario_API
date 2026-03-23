@@ -7,7 +7,7 @@ const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
-const logger = require('./config/logger');
+
 
 const { conectarDB } = require('./config/database');
 const corsOptions = require('./config/cors');
@@ -25,7 +25,7 @@ conectarDB()
     console.log(
       "============== Se conecto con el servidor de DB =============="
     );
-    CrearModelos();
+    // CrearModelos();
 
   })
   .catch((error) => console.log(error));

@@ -34,7 +34,7 @@ const salidaValidationRules = [
 const estadoValidationRules = [
     body('estado')
         .notEmpty().withMessage('El estado es obligatorio')
-        .isIn(['Enviada', 'Recibida', 'Anulada']).withMessage('El estado debe ser: Enviada, Recibida o Anulada')
+        .isIn(['Enviada a sucursal', 'Recibida', 'Anulada']).withMessage('El estado debe ser: Enviada a sucursal, Recibida o Anulada')
 ];
 
 const salidaIdValidation = [
@@ -163,7 +163,7 @@ router.post(
  *             properties:
  *               estado:
  *                 type: string
- *                 enum: ["Enviada", "Recibida", "Anulada"]
+ *                 enum: ["Enviada a sucursal", "Recibida", "Anulada"]
  *     responses:
  *       200:
  *         description: Estado actualizado correctamente
@@ -234,7 +234,7 @@ router.post(
  *           format: date-time
  *         estado:
  *           type: string
- *           enum: ["Enviada", "Recibida", "Anulada"]
+ *           enum: ["Enviada a sucursal", "Recibida", "Anulada"]
  *         totalCosto:
  *           type: number
  *         sucursalId:

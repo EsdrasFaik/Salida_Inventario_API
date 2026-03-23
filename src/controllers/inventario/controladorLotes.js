@@ -9,12 +9,12 @@ const { Op } = require('sequelize');
 exports.createLote = async (req, res) => {
     try {
         const { numeroLote, fechaVencimiento, cantidadActual, costoUnitario, productoId, sucursalId, estado } = req.body;
+
         const sucursal = await Sucursal.findByPk(sucursalId);
         if (!sucursal) return res.status(400).json({ error: 'Sucursal no encontrada' });
-        const numeroLoteConSufijo = `${numeroLote} - ${sucursal.nombre}`;
 
         const nuevo = await Lote.create({
-            numeroLote: numeroLoteConSufijo,
+            numeroLote,
             fechaVencimiento,
             cantidadActual: cantidadActual || 0,
             costoUnitario,
@@ -85,13 +85,10 @@ exports.updateLote = async (req, res) => {
         const lote = await Lote.findByPk(id);
         if (!lote) return res.status(404).json({ error: 'Lote no encontrado' });
 
-        const sucursal = await Sucursal.findByPk(lote.sucursalId);
-        if (!sucursal) return res.status(400).json({ error: 'Sucursal no encontrada' });
-        const numeroLoteConSufijo = `${numeroLote} - ${sucursal.nombre}`;
-
+        // ← validar duplicado sin sufijo
         const duplicado = await Lote.findOne({
             where: {
-                numeroLote: numeroLoteConSufijo,
+                numeroLote,
                 sucursalId: lote.sucursalId,
                 id: { [Op.ne]: id }
             }
@@ -99,11 +96,12 @@ exports.updateLote = async (req, res) => {
 
         if (duplicado) {
             return res.status(400).json({
-                error: `Ya existe un lote con el número "${numeroLoteConSufijo}" en esta sucursal.`
+                error: `Ya existe un lote con el número "${numeroLote}" en esta sucursal.`
             });
         }
 
-        await lote.update({ numeroLote: numeroLoteConSufijo, fechaVencimiento, cantidadActual, costoUnitario, productoId, estado });
+        // ← guardar sin sufijo
+        await lote.update({ numeroLote, fechaVencimiento, cantidadActual, costoUnitario, productoId, estado });
 
         res.json({ message: 'Lote actualizado correctamente' });
     } catch (error) {
