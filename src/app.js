@@ -7,7 +7,7 @@ const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 const errorHandler = require('./middlewares/errorHandler');
-const logger = require('./config/logger');
+
 
 const { conectarDB } = require('./config/database');
 const corsOptions = require('./config/cors');
