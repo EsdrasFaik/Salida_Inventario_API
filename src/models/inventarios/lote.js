@@ -1,13 +1,13 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../../config/database');
 const Producto = require('../productos/producto');
-const Sucursal = require('../inventario/sucursal');
+const Sucursal = require('../sucursales/sucursal');
 
 const Lote = sequelize.define('Lote', {
     numeroLote: {
         type: DataTypes.STRING(100),
         allowNull: false,
-        comment: 'Código del fabricante'
+        unique: true
     },
     fechaVencimiento: {
         type: DataTypes.DATEONLY,
@@ -21,6 +21,11 @@ const Lote = sequelize.define('Lote', {
     costoUnitario: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false
+    },
+    estado: {
+        type: DataTypes.ENUM('Activo', 'Inactivo'),
+        allowNull: false,
+        defaultValue: 'Activo'
     }
 }, {
     timestamps: true,

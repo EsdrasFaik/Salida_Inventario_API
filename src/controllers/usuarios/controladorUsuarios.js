@@ -1,6 +1,6 @@
 const argon2 = require('argon2');
 const Usuario = require('../../models/usuarios/usuario');
-const Sucursal = require('../../models/inventario/sucursal');
+const Sucursal = require('../../models/sucursales/sucursal');
 const { Op } = require('sequelize');
 const { enviarCorreo } = require('../../libs/email');
 const crypto = require('crypto');
@@ -31,6 +31,7 @@ exports.createUsuario = async (req, res) => {
 
         res.status(201).json({ message: 'Usuario creado', id: nuevoUsuario.id });
     } catch (error) {
+        console.error('ERROR createUsuario:', error.message);
         res.status(500).json({ error: 'Error al crear usuario' });
     }
 };
@@ -50,6 +51,7 @@ exports.getUsuarios = async (req, res) => {
         });
         res.json(usuarios);
     } catch (error) {
+        console.error('ERROR getUsuarios:', error.message);
         res.status(500).json({ error: 'Error al obtener usuarios' });
     }
 };
@@ -67,6 +69,7 @@ exports.getUsuarioById = async (req, res) => {
         if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
         res.json(usuario);
     } catch (error) {
+        console.error('ERROR getUsuarioById:', error.message);
         res.status(500).json({ error: 'Error al obtener el usuario' });
     }
 };
@@ -86,6 +89,7 @@ exports.updateUsuario = async (req, res) => {
 
         res.json({ message: 'Usuario actualizado correctamente' });
     } catch (error) {
+        console.error('ERROR updateUsuario:', error.message);
         res.status(500).json({ error: 'Error al actualizar usuario' });
     }
 };
@@ -135,6 +139,7 @@ exports.updateContrasena = async (req, res) => {
 
         res.json({ message: 'Contraseña actualizada correctamente' });
     } catch (error) {
+        console.error('ERROR updateContrasena:', error.message);
         res.status(500).json({ error: 'Error al actualizar contraseña' });
     }
 };
@@ -161,10 +166,7 @@ exports.inicioSesion = async (req, res) => {
         const esValida = await argon2.verify(usuario.contrasena, contrasena);
 
         if (esValida) {
-            await usuario.update({ intentos: 0 });
-
             const token = firmarToken(usuario);
-
             return res.json({
                 Token: token,
                 Usuario: {
@@ -177,11 +179,11 @@ exports.inicioSesion = async (req, res) => {
                 }
             });
         } else {
-            await usuario.increment('intentos');
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
+
     } catch (error) {
-        console.error(error);
+        console.error('ERROR inicioSesion:', error.message);
         res.status(500).json({ error: 'Error en el servidor' });
     }
 };

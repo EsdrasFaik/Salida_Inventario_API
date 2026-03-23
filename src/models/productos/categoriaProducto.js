@@ -10,14 +10,6 @@ const CategoriaProducto = sequelize.define('CategoriaProducto', {
         type: DataTypes.STRING(50),
         allowNull: true
     },
-    orden: {
-        type: DataTypes.INTEGER,
-        defaultValue: 1
-    },
-    idtipoprincipal: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    },
     estado: {
         type: DataTypes.ENUM('Activo', 'Inactivo'),
         defaultValue: 'Activo'

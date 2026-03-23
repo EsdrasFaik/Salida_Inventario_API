@@ -32,7 +32,12 @@ const productoValidationRules = [
             return true;
         }),
     body('descripcion').optional().isLength({ max: 2000 }).withMessage('La descripción es demasiado larga'),
-    body('categoriaId').optional().isInt({ min: 1 }).withMessage('El ID de categoría debe ser un entero válido')
+    body('categoriaId').optional().isInt({ min: 1 }).withMessage('El ID de categoría debe ser un entero válido'),
+    body('estado')
+        .optional()
+        .isIn(['Activo', 'Inactivo']).withMessage('El estado debe ser Activo o Inactivo'),
+    body('nombre')
+        .trim()
 ];
 
 const productoIdValidation = [
@@ -123,7 +128,6 @@ router.get('/buscar', productoIdValidation, validar, productosController.getProd
  */
 router.post(
     '/guardar',
-    verificarToken,
     uploadProducto,
     manejarErroresImagen,
     productoValidationRules,
@@ -174,7 +178,6 @@ router.post(
  */
 router.put(
     '/editar',
-    verificarToken,
     uploadProducto,
     manejarErroresImagen,
     [...productoIdValidation, ...productoValidationRules],
@@ -202,7 +205,6 @@ router.put(
  */
 router.delete(
     '/eliminar',
-    verificarToken,
     productoIdValidation,
     validar,
     productosController.deleteProducto

@@ -2,13 +2,16 @@ const { Router } = require('express');
 const router = Router();
 const { body, query } = require('express-validator');
 const sucursalesController = require('../../controllers/sucursales/controladorSucursales');
-const Sucursal = require('../../models/inventario/sucursal');
-const { verificarToken } = require('../../middlewares/auth');
+const Sucursal = require('../../models/sucursales/sucursal');
 const validar = require('../../middlewares/validar');
 
 // --- VALIDACIONES ---
 const sucursalValidationRules = [
+    body('estado')
+        .optional()
+        .isIn(['Activo', 'Inactivo']).withMessage('El estado debe ser Activo o Inactivo'),
     body('nombre')
+        .trim()
         .notEmpty().withMessage('El nombre de la sucursal es obligatorio')
         .isLength({ min: 2, max: 100 }).withMessage('El nombre debe tener entre 2 y 100 caracteres')
         .custom(async (value, { req }) => {
@@ -52,7 +55,7 @@ const sucursalIdValidation = [
  *       200:
  *         description: Lista de sucursales
  */
-router.get('/listar', verificarToken, sucursalesController.getSucursales);
+router.get('/listar', sucursalesController.getSucursales);
 
 /**
  * @swagger
@@ -74,7 +77,7 @@ router.get('/listar', verificarToken, sucursalesController.getSucursales);
  *       404:
  *         description: Sucursal no encontrada
  */
-router.get('/buscar', verificarToken, sucursalIdValidation, validar, sucursalesController.getSucursalById);
+router.get('/buscar', sucursalIdValidation, validar, sucursalesController.getSucursalById);
 
 /**
  * @swagger
@@ -108,7 +111,6 @@ router.get('/buscar', verificarToken, sucursalIdValidation, validar, sucursalesC
  */
 router.post(
     '/guardar',
-    verificarToken,
     sucursalValidationRules,
     validar,
     sucursalesController.createSucursal
@@ -147,7 +149,6 @@ router.post(
  */
 router.put(
     '/editar',
-    verificarToken,
     [...sucursalIdValidation, ...sucursalValidationRules],
     validar,
     sucursalesController.updateSucursal
@@ -175,7 +176,6 @@ router.put(
  */
 router.delete(
     '/eliminar',
-    verificarToken,
     sucursalIdValidation,
     validar,
     sucursalesController.deleteSucursal

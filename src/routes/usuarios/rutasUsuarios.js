@@ -3,7 +3,6 @@ const router = Router();
 const { body, query } = require('express-validator');
 const usuariosController = require('../../controllers/usuarios/controladorUsuarios');
 const rateLimit = require('express-rate-limit');
-const { verificarToken } = require('../../middlewares/auth');
 const validar = require('../../middlewares/validar');
 const Usuario = require('../../models/usuarios/usuario');
 
@@ -18,17 +17,24 @@ const usuarioValidationRules = [
   body('nombre')
     .notEmpty().withMessage('El nombre es obligatorio')
     .isLength({ min: 3, max: 50 }).withMessage('El nombre debe tener entre 3 y 50 caracteres'),
-  body('correo')
-    .notEmpty().withMessage('El correo es obligatorio')
-    .isEmail().withMessage('El correo no tiene un formato válido')
-    .normalizeEmail(),
-  body('contrasena')
-    .notEmpty().withMessage('La contraseña es obligatoria')
-    .isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
   body('tipoUsuario')
     .notEmpty().withMessage('El tipo de usuario es obligatorio')
     .isIn(['Jefe de bodega', 'Empleado', 'Administrador'])
     .withMessage('El tipo de usuario debe ser: Jefe de bodega, Empleado o Administrador'),
+  body('correo')
+    .notEmpty().withMessage('El correo es obligatorio')
+    .isEmail().withMessage('El correo no tiene un formato válido')
+    .normalizeEmail()
+    .custom(async (value, { req }) => {
+      const usuario = await Usuario.findOne({ where: { correo: value } });
+      if (usuario && usuario.id !== parseInt(req.query?.id)) {
+        throw new Error('El correo ya está registrado');
+      }
+      return true;
+    }),
+  body('contrasena')
+    .notEmpty().withMessage('La contraseña es obligatoria')
+    .isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
   body('sucursalId')
     .optional()
     .isInt({ min: 1 }).withMessage('El ID de sucursal debe ser un número entero válido')
@@ -42,9 +48,6 @@ const usuarioUpdateRules = [
     .notEmpty().withMessage('El tipo de usuario es obligatorio')
     .isIn(['Jefe de bodega', 'Empleado', 'Administrador'])
     .withMessage('El tipo de usuario debe ser: Jefe de bodega, Empleado o Administrador'),
-  body('sucursalId')
-    .optional()
-    .isInt({ min: 1 }).withMessage('El ID de sucursal debe ser un número entero válido'),
   body('estado')
     .optional()
     .isIn(['Activo', 'Bloqueado', 'Inactivo', 'Logeado']).withMessage('Estado inválido')
@@ -113,7 +116,7 @@ const usuarioIdValidation = [
  *       401:
  *         description: No autorizado
  */
-router.get('/listar', verificarToken, usuariosController.getUsuarios);
+router.get('/listar', usuariosController.getUsuarios);
 
 /**
  * @swagger
@@ -135,7 +138,7 @@ router.get('/listar', verificarToken, usuariosController.getUsuarios);
  *       404:
  *         description: Usuario no encontrado
  */
-router.get('/buscar', verificarToken, usuarioIdValidation, validar, usuariosController.getUsuarioById);
+router.get('/buscar', usuarioIdValidation, validar, usuariosController.getUsuarioById);
 
 /**
  * @swagger
@@ -227,7 +230,6 @@ router.post(
  */
 router.put(
   '/editar',
-  verificarToken,
   [...usuarioIdValidation, ...usuarioUpdateRules],
   validar,
   usuariosController.updateUsuario

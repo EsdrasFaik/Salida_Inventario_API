@@ -10,6 +10,11 @@ const Sucursal = sequelize.define('Sucursal', {
         type: DataTypes.STRING(255),
         allowNull: false
     },
+    estado: {
+        type: DataTypes.ENUM('Activo', 'Inactivo'),
+        allowNull: false,
+        defaultValue: 'Activo'
+    }
 }, {
     timestamps: true,
     tableName: 'sucursales'

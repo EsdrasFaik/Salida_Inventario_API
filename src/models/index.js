@@ -1,9 +1,9 @@
 const Usuario = require('./usuarios/usuario');
-const Sucursal = require('./inventario/sucursal');
+const Sucursal = require('./sucursales/sucursal');
 const CategoriaProducto = require('./productos/categoriaProducto');
 const Producto = require('./productos/producto');
 const ImagenProducto = require('./productos/imagenProducto');
-const Lote = require('./inventario/lote');
+const Lote = require('./inventarios/lote');
 const Salida = require('./movimientos/salida');
 const SalidaDetalle = require('./movimientos/salidaDetalle');
 

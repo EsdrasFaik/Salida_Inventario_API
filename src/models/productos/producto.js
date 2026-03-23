@@ -15,6 +15,11 @@ const Producto = sequelize.define('Producto', {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true
+    },
+    estado: {
+        type: DataTypes.ENUM('Activo', 'Inactivo'),
+        allowNull: false,
+        defaultValue: 'Activo'
     }
 }, {
     timestamps: true,

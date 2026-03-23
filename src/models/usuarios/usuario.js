@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../../config/database');
-const Sucursal = require('../inventario/sucursal');
+const Sucursal = require('../sucursales/sucursal');
 
 const Usuario = sequelize.define('Usuario', {
   nombre: {
@@ -18,7 +18,8 @@ const Usuario = sequelize.define('Usuario', {
   },
   tipoUsuario: {
     type: DataTypes.ENUM('Jefe de bodega', 'Empleado', 'Administrador'),
-    allowNull: false
+    allowNull: false,
+    defaultValue: 'Empleado'
   },
   pin: {
     type: DataTypes.STRING,

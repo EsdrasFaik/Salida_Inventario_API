@@ -2,7 +2,7 @@ const { DataTypes } = require('sequelize');
 const { sequelize } = require('../../config/database');
 const Salida = require('./salida');
 const Producto = require('../productos/producto');
-const Lote = require('../inventario/lote');
+const Lote = require('../inventarios/lote');
 
 const SalidaDetalle = sequelize.define('SalidaDetalle', {
     cantidad: {
@@ -21,9 +21,6 @@ const SalidaDetalle = sequelize.define('SalidaDetalle', {
 
 SalidaDetalle.belongsTo(Salida, { foreignKey: 'salidaId' });
 Salida.hasMany(SalidaDetalle, { foreignKey: 'salidaId' });
-
-SalidaDetalle.belongsTo(Producto, { foreignKey: 'productoId' });
-Producto.hasMany(SalidaDetalle, { foreignKey: 'productoId' });
 
 SalidaDetalle.belongsTo(Lote, { foreignKey: 'loteId' });
 Lote.hasMany(SalidaDetalle, { foreignKey: 'loteId' });

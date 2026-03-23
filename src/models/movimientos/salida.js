@@ -1,10 +1,9 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../../config/database');
-const Sucursal = require('../inventario/sucursal');
+const Sucursal = require('../sucursales/sucursal');
 const Usuario = require('../usuarios/usuario');
 
 const Salida = sequelize.define('Salida', {
-
     fechaSalida: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -19,6 +18,10 @@ const Salida = sequelize.define('Salida', {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
         defaultValue: 0.00
+    },
+    fechaRecibido: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     timestamps: true,
@@ -28,7 +31,7 @@ const Salida = sequelize.define('Salida', {
 Salida.belongsTo(Sucursal, { as: 'SucursalOrigen', foreignKey: 'sucursalOrigenId' });
 Salida.belongsTo(Sucursal, { as: 'SucursalDestino', foreignKey: 'sucursalDestinoId' });
 
-Salida.belongsTo(Usuario, { foreignKey: 'usuarioId' });
-Usuario.hasMany(Salida, { foreignKey: 'usuarioId' });
+Salida.belongsTo(Usuario, { as: 'UsuarioRegistra', foreignKey: 'usuarioId' });
+Salida.belongsTo(Usuario, { as: 'UsuarioRecibe', foreignKey: 'usuarioRecibioId' });
 
 module.exports = Salida;

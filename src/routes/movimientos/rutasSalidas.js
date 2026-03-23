@@ -2,29 +2,33 @@ const { Router } = require('express');
 const router = Router();
 const { body, query } = require('express-validator');
 const salidasController = require('../../controllers/movimientos/controladorSalidas');
-const Salida = require('../../models/movimientos/salida');
 const { verificarToken } = require('../../middlewares/auth');
+const Salida = require('../../models/movimientos/salida');
 const validar = require('../../middlewares/validar');
 
 // --- VALIDACIONES ---
 const salidaValidationRules = [
-    body('sucursalId')
-        .notEmpty().withMessage('El ID de sucursal es obligatorio')
-        .isInt({ min: 1 }).withMessage('El ID de sucursal debe ser un número entero válido'),
-    body('usuarioId')
-        .notEmpty().withMessage('El ID de usuario es obligatorio')
-        .isInt({ min: 1 }).withMessage('El ID de usuario debe ser un número entero válido'),
+    body('sucursalOrigenId')
+        .notEmpty().withMessage('El ID de sucursal origen es obligatorio')
+        .isInt({ min: 1 }).withMessage('El ID de sucursal origen debe ser un número entero válido'),
+    body('sucursalDestinoId')
+        .notEmpty().withMessage('El ID de sucursal destino es obligatorio')
+        .isInt({ min: 1 }).withMessage('El ID de sucursal destino debe ser un número entero válido')
+        .custom((value, { req }) => {
+            if (parseInt(value) === parseInt(req.body.sucursalOrigenId)) {
+                throw new Error('La sucursal destino no puede ser igual a la sucursal origen');
+            }
+            return true;
+        }),
     body('detalles')
         .notEmpty().withMessage('Los detalles de la salida son obligatorios')
         .isArray({ min: 1 }).withMessage('Debe incluir al menos un detalle'),
-    body('detalles.*.productoId')
-        .isInt({ min: 1 }).withMessage('Cada detalle debe tener un productoId válido'),
     body('detalles.*.loteId')
         .isInt({ min: 1 }).withMessage('Cada detalle debe tener un loteId válido'),
     body('detalles.*.cantidad')
         .isInt({ min: 1 }).withMessage('La cantidad debe ser un entero positivo'),
     body('detalles.*.costoHistorico')
-        .isDecimal({ decimal_digits: '1,2' }).withMessage('El costo histórico debe ser un decimal válido')
+        .isDecimal({ decimal_digits: '1,2' }).withMessage('El costo histórico debe ser un decimal válido'),
 ];
 
 const estadoValidationRules = [
@@ -62,7 +66,7 @@ const salidaIdValidation = [
  *       200:
  *         description: Lista de salidas con sus detalles
  */
-router.get('/listar', verificarToken, salidasController.getSalidas);
+router.get('/listar', salidasController.getSalidas);
 
 /**
  * @swagger
@@ -84,7 +88,7 @@ router.get('/listar', verificarToken, salidasController.getSalidas);
  *       404:
  *         description: Salida no encontrada
  */
-router.get('/buscar', verificarToken, salidaIdValidation, validar, salidasController.getSalidaById);
+router.get('/buscar', salidaIdValidation, validar, salidasController.getSalidaById);
 
 /**
  * @swagger
@@ -116,8 +120,6 @@ router.get('/buscar', verificarToken, salidaIdValidation, validar, salidasContro
  *                 items:
  *                   type: object
  *                   properties:
- *                     productoId:
- *                       type: integer
  *                     loteId:
  *                       type: integer
  *                     cantidad:
@@ -198,6 +200,24 @@ router.delete(
     salidaIdValidation,
     validar,
     salidasController.deleteSalida
+);
+
+/**
+ * @swagger
+ * /salidas/simular-detalle:
+ *   post:
+ *     summary: Calcula los lotes disponibles a usar para un envío
+ */
+router.post(
+    '/simular',
+    verificarToken,
+    [
+        body('sucursalOrigenId').notEmpty().isInt({ min: 1 }).withMessage('sucursalOrigenId es obligatorio'),
+        body('productoId').notEmpty().isInt({ min: 1 }).withMessage('productoId es obligatorio'),
+        body('cantidad').notEmpty().isInt({ min: 1 }).withMessage('La cantidad debe ser mayor a 0'),
+    ],
+    validar,
+    salidasController.simularDetalleSalida
 );
 
 /**

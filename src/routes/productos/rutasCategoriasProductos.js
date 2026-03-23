@@ -19,6 +19,7 @@ const manejarErroresImagen = (err, req, res, next) => {
 // --- VALIDACIONES ---
 const categoriaValidationRules = [
     body('Categoria')
+        .trim()
         .notEmpty().withMessage('El nombre de la categoría es obligatorio')
         .isLength({ min: 2, max: 30 }).withMessage('El nombre debe tener entre 2 y 30 caracteres')
         .custom(async (value, { req }) => {
@@ -29,7 +30,6 @@ const categoriaValidationRules = [
             return true;
         }),
     body('Descripcion').optional().isLength({ max: 50 }).withMessage('La descripción no puede superar 50 caracteres'),
-    body('orden').optional().isInt({ min: 1 }).withMessage('El orden debe ser un entero positivo'),
     body('estado').optional().isIn(['Activo', 'Inactivo']).withMessage('El estado debe ser Activo o Inactivo')
 ];
 
@@ -104,8 +104,6 @@ router.get('/buscar', categoriaIdValidation, validar, categoriasController.getCa
  *                 example: "Medicamentos"
  *               Descripcion:
  *                 type: string
- *               orden:
- *                 type: integer
  *               estado:
  *                 type: string
  *                 enum: ["Activo", "Inactivo"]
@@ -118,7 +116,6 @@ router.get('/buscar', categoriaIdValidation, validar, categoriasController.getCa
  */
 router.post(
     '/guardar',
-    verificarToken,
     uploadCategoria,
     manejarErroresImagen,
     categoriaValidationRules,
@@ -151,8 +148,6 @@ router.post(
  *                 type: string
  *               Descripcion:
  *                 type: string
- *               orden:
- *                 type: integer
  *               estado:
  *                 type: string
  *                 enum: ["Activo", "Inactivo"]
@@ -165,7 +160,6 @@ router.post(
  */
 router.put(
     '/editar',
-    verificarToken,
     uploadCategoria,
     manejarErroresImagen,
     [...categoriaIdValidation, ...categoriaValidationRules],
@@ -193,7 +187,6 @@ router.put(
  */
 router.delete(
     '/eliminar',
-    verificarToken,
     categoriaIdValidation,
     validar,
     categoriasController.deleteCategoria
@@ -212,8 +205,6 @@ router.delete(
  *           type: string
  *         Descripcion:
  *           type: string
- *         orden:
- *           type: integer
  *         estado:
  *           type: string
  *           enum: ["Activo", "Inactivo"]

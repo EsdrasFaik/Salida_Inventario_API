@@ -1,6 +1,9 @@
 const Producto = require('../../models/productos/producto');
 const ImagenProducto = require('../../models/productos/imagenProducto');
 const CategoriaProducto = require('../../models/productos/categoriaProducto');
+const Lote = require('../../models/inventarios/lote');
+const SalidaDetalle = require('../../models/movimientos/salidaDetalle');
+
 const { sequelize } = require('../../config/database');
 const fs = require('fs');
 const path = require('path');
@@ -9,19 +12,15 @@ const path = require('path');
 exports.createProducto = async (req, res) => {
     const t = await sequelize.transaction();
     try {
-        const { nombre, descripcion, sku, categoriaId } = req.body;
+        const { nombre, descripcion, sku, categoriaId, estado } = req.body;
 
         const skuExiste = await Producto.findOne({ where: { sku } });
-        if (skuExiste) {
-            await t.rollback();
-            return res.status(400).json({ error: 'El SKU ya está registrado' });
-        }
-
         const nuevo = await Producto.create({
             nombre,
             descripcion: descripcion || null,
             sku,
-            categoriaId: categoriaId || null
+            categoriaId: categoriaId || null,
+            estado: estado
         }, { transaction: t });
 
         if (req.files && req.files.length > 0) {
@@ -44,7 +43,12 @@ exports.createProducto = async (req, res) => {
                 if (fs.existsSync(ruta)) fs.unlinkSync(ruta);
             });
         }
-        res.status(500).json({ error: 'Error al registrar el producto' });
+        console.error('ERROR createProducto:', error.message);
+        res.status(500).json({
+            error: error.name === 'SequelizeUniqueConstraintError'
+                ? 'El SKU ya está registrado'
+                : 'Error al registrar el producto'
+        });
     }
 };
 
@@ -53,13 +57,30 @@ exports.getProductos = async (req, res) => {
     try {
         const productos = await Producto.findAll({
             include: [
-                { model: CategoriaProducto, attributes: ['id', 'Categoria', 'Descripcion'] },
+                { model: CategoriaProducto, attributes: ['id', 'Categoria', 'Descripcion', 'imagen'] },
                 { model: ImagenProducto, attributes: ['id', 'imagen'] }
             ],
+            attributes: {
+                include: [
+                    [
+                        sequelize.literal(`(SELECT COUNT(*) FROM lotes WHERE lotes.productoId = \`Producto\`.\`id\`)`),
+                        'totalLotes'
+                    ]
+                ]
+            },
             order: [['nombre', 'ASC']]
         });
-        res.json(productos);
+
+        const resultado = productos.map(p => ({
+            ...p.toJSON(),
+            tieneRegistrosVinculados:
+                parseInt(p.dataValues.totalLotes) > 0 ||
+                parseInt(p.dataValues.totalSalidas) > 0,
+        }));
+
+        res.json(resultado);
     } catch (error) {
+        console.error('ERROR getProductos:', error.message);
         res.status(500).json({ error: 'Error al obtener los productos' });
     }
 };
@@ -70,13 +91,32 @@ exports.getProductoById = async (req, res) => {
         const { id } = req.query;
         const producto = await Producto.findByPk(id, {
             include: [
-                { model: CategoriaProducto, attributes: ['id', 'Categoria', 'Descripcion'] },
+                { model: CategoriaProducto, attributes: ['id', 'Categoria', 'Descripcion', 'imagen'] },
                 { model: ImagenProducto, attributes: ['id', 'imagen'] }
             ]
         });
+
         if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
-        res.json(producto);
+
+        const lotesVinculados = await Lote.count({ where: { productoId: id } });
+
+        // ← SalidaDetalle no tiene productoId, se vincula a través de lotes
+        const lotesIds = await Lote.findAll({
+            where: { productoId: id },
+            attributes: ['id']
+        });
+        const loteIdList = lotesIds.map(l => l.id);
+        const salidasVinculadas = loteIdList.length > 0
+            ? await SalidaDetalle.count({ where: { loteId: loteIdList } })
+            : 0;
+
+        const tieneRegistrosVinculados = (lotesVinculados > 0 || salidasVinculadas > 0);
+        res.json({
+            ...producto.toJSON(),
+            tieneRegistrosVinculados
+        });
     } catch (error) {
+        console.error('ERROR getProductoById:', error.message);
         res.status(500).json({ error: 'Error al obtener el producto' });
     }
 };
@@ -86,7 +126,7 @@ exports.updateProducto = async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.query;
-        const { nombre, descripcion, sku, categoriaId, imagenesAEliminar } = req.body;
+        const { nombre, descripcion, sku, categoriaId, imagenesAEliminar, estado } = req.body;
 
         if (!id) return res.status(400).json({ error: 'ID no proporcionado' });
 
@@ -94,7 +134,7 @@ exports.updateProducto = async (req, res) => {
         if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
 
         await producto.update(
-            { nombre, descripcion, sku, categoriaId: categoriaId || null },
+            { nombre, descripcion, sku, categoriaId: categoriaId || null, estado: estado },
             { transaction: t }
         );
 
@@ -107,7 +147,7 @@ exports.updateProducto = async (req, res) => {
                 });
 
                 imagenesDB.forEach(img => {
-                    const ruta = path.join(__dirname, `../../public/img/productos/${img.imagen}`);
+                    const ruta = path.join(__dirname, `../../../public/img/productos/${img.imagen}`);
                     if (fs.existsSync(ruta)) fs.unlinkSync(ruta);
                 });
 
@@ -134,7 +174,7 @@ exports.updateProducto = async (req, res) => {
         await t.rollback();
         if (req.files) {
             req.files.forEach(file => {
-                const ruta = path.join(__dirname, `../../public/img/productos/${file.filename}`);
+                const ruta = path.join(__dirname, `../../../public/img/productos/${file.filename}`);
                 if (fs.existsSync(ruta)) fs.unlinkSync(ruta);
             });
         }
@@ -156,7 +196,7 @@ exports.deleteProducto = async (req, res) => {
 
         if (eliminado) {
             imagenes.forEach(img => {
-                const ruta = path.join(__dirname, `../../public/img/productos/${img.imagen}`);
+                const ruta = path.join(__dirname, `../../../public/img/productos/${img.imagen}`);
                 if (fs.existsSync(ruta)) fs.unlinkSync(ruta);
             });
             await t.commit();
